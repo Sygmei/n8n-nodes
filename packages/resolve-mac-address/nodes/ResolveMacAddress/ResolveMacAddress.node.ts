@@ -1,6 +1,7 @@
 import { execFile } from 'node:child_process';
 import { lookup } from 'node:dns/promises';
 import { isIP } from 'node:net';
+import { networkInterfaces } from 'node:os';
 import type {
   IExecuteFunctions,
   INodeExecutionData,
@@ -14,7 +15,79 @@ type CommandResult = {
   stderr: string;
 };
 
+type NetworkDetails = {
+  interfaceName: string;
+  interfaceAddress: string;
+  netmask: string;
+  prefixLength: number;
+  networkAddress: string;
+  broadcastAddress: string;
+};
+
 const macAddressPattern = /\b(?:[0-9a-f]{2}[:-]){5}[0-9a-f]{2}\b/i;
+
+function ipv4ToNumber(ipAddress: string): number {
+  return ipAddress
+    .split('.')
+    .reduce((value, octet) => (value << 8) + Number(octet), 0) >>> 0;
+}
+
+function numberToIpv4(value: number): string {
+  return [
+    (value >>> 24) & 255,
+    (value >>> 16) & 255,
+    (value >>> 8) & 255,
+    value & 255,
+  ].join('.');
+}
+
+function prefixLengthFromNetmask(netmask: string): number {
+  const netmaskNumber = ipv4ToNumber(netmask);
+  let prefixLength = 0;
+
+  for (let bit = 31; bit >= 0; bit -= 1) {
+    if ((netmaskNumber & (1 << bit)) === 0) {
+      break;
+    }
+
+    prefixLength += 1;
+  }
+
+  return prefixLength;
+}
+
+function getNetworkDetails(ipAddress: string): NetworkDetails | undefined {
+  const targetAddress = ipv4ToNumber(ipAddress);
+
+  for (const [interfaceName, addresses] of Object.entries(networkInterfaces())) {
+    for (const address of addresses ?? []) {
+      if (address.family !== 'IPv4' || address.internal) {
+        continue;
+      }
+
+      const interfaceAddress = ipv4ToNumber(address.address);
+      const netmask = ipv4ToNumber(address.netmask);
+      const networkAddress = interfaceAddress & netmask;
+
+      if ((targetAddress & netmask) !== networkAddress) {
+        continue;
+      }
+
+      const broadcastAddress = networkAddress | (~netmask >>> 0);
+
+      return {
+        interfaceName,
+        interfaceAddress: address.address,
+        netmask: address.netmask,
+        prefixLength: prefixLengthFromNetmask(address.netmask),
+        networkAddress: numberToIpv4(networkAddress),
+        broadcastAddress: numberToIpv4(broadcastAddress),
+      };
+    }
+  }
+
+  return undefined;
+}
 
 function normalizeMacAddress(macAddress: string): string {
   return macAddress.replace(/-/g, ':').toUpperCase();
@@ -186,6 +259,7 @@ export class ResolveMacAddress implements INodeType {
 
         const neighborTable = await readNeighborTable(ipAddress, probeTimeoutMs);
         const macAddress = parseMacAddress(neighborTable);
+        const network = getNetworkDetails(ipAddress);
 
         if (!macAddress && notFoundBehavior === 'throw') {
           throw new Error(
@@ -201,6 +275,7 @@ export class ResolveMacAddress implements INodeType {
               ipAddress,
               macAddress,
               status: macAddress ? 'resolved' : 'notFound',
+              network,
               probeError,
             },
           },

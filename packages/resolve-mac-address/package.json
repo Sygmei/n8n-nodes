@@ -1,0 +1,51 @@
+{
+  "name": "n8n-nodes-resolve-mac-address",
+  "version": "0.1.0",
+  "description": "n8n community node to resolve local-network hosts to MAC addresses.",
+  "license": "MIT",
+  "author": {
+    "name": "Sygmei"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/Sygmei/n8n-nodes.git",
+    "directory": "packages/resolve-mac-address"
+  },
+  "homepage": "https://github.com/Sygmei/n8n-nodes/tree/main/packages/resolve-mac-address",
+  "bugs": {
+    "url": "https://github.com/Sygmei/n8n-nodes/issues"
+  },
+  "keywords": [
+    "n8n-community-node-package",
+    "n8n",
+    "arp",
+    "mac-address",
+    "network"
+  ],
+  "main": "dist/nodes/ResolveMacAddress/ResolveMacAddress.node.js",
+  "types": "dist/nodes/ResolveMacAddress/ResolveMacAddress.node.d.ts",
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "node ../../scripts/clean-dist.mjs && tsc -p tsconfig.json && node ../../scripts/copy-node-assets.mjs",
+    "check": "tsc -p tsconfig.json --noEmit",
+    "prepack": "npm run build"
+  },
+  "n8n": {
+    "n8nNodesApiVersion": 1,
+    "credentials": [],
+    "nodes": [
+      "dist/nodes/ResolveMacAddress/ResolveMacAddress.node.js"
+    ]
+  },
+  "devDependencies": {
+    "@types/node": "^24.10.1",
+    "n8n-workflow": "^1.101.0",
+    "typescript": "^5.9.3"
+  },
+  "peerDependencies": {
+    "n8n-workflow": "^1.101.0"
+  }
+}

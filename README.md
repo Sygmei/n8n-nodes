@@ -24,6 +24,10 @@ The first package is `n8n-nodes-wol`. It sends Wake-on-LAN magic packets to a co
 
 The second package is `n8n-nodes-wait-for-tcp-port`. It waits until a TCP host and port accepts connections, which is useful after sending a Wake-on-LAN packet.
 
+## Resolve MAC Address
+
+The third package is `n8n-nodes-resolve-mac-address`. It resolves a local-network hostname or IPv4 address to a MAC address using the host OS neighbor table.
+
 ## Development
 
 Install dependencies:

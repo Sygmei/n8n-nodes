@@ -1,7 +1,7 @@
 {
   "name": "resolve-mac-address",
   "packageName": "n8n-nodes-resolve-mac-address",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "root": "packages/resolve-mac-address",
   "description": "Resolve a local-network hostname or IPv4 address to a MAC address from n8n."
 }

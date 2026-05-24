@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" role="img" aria-labelledby="title">
+  <title id="title">Wake-on-LAN</title>
+  <rect width="100" height="100" rx="18" fill="#1f6feb"/>
+  <path
+    d="M28.7 31.2a31 31 0 1 0 42.6 0"
+    fill="none"
+    stroke="#ffffff"
+    stroke-width="10"
+    stroke-linecap="butt"
+  />
+  <path
+    d="M43 18h14v33H43z"
+    fill="#ffffff"
+  />
+  <path
+    d="M39 27h22v16H39z"
+    fill="#ffffff"
+  />
+  <path
+    d="M40 18v-7M46.7 18v-7M53.3 18v-7M60 18v-7"
+    fill="none"
+    stroke="#ffffff"
+    stroke-width="4"
+    stroke-linecap="square"
+  />
+</svg>

@@ -1,0 +1,50 @@
+{
+  "name": "n8n-nodes-wol",
+  "version": "0.1.0",
+  "description": "n8n community node to send Wake-on-LAN magic packets.",
+  "license": "MIT",
+  "author": {
+    "name": "Sygmei"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/Sygmei/n8n-nodes.git",
+    "directory": "packages/wake-on-lan"
+  },
+  "homepage": "https://github.com/Sygmei/n8n-nodes/tree/main/packages/wake-on-lan",
+  "bugs": {
+    "url": "https://github.com/Sygmei/n8n-nodes/issues"
+  },
+  "keywords": [
+    "n8n-community-node-package",
+    "n8n",
+    "wake-on-lan",
+    "wol"
+  ],
+  "main": "dist/nodes/WakeOnLan/WakeOnLan.node.js",
+  "types": "dist/nodes/WakeOnLan/WakeOnLan.node.d.ts",
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "node ../../scripts/clean-dist.mjs && tsc -p tsconfig.json && node ../../scripts/copy-node-assets.mjs",
+    "check": "tsc -p tsconfig.json --noEmit",
+    "prepack": "npm run build"
+  },
+  "n8n": {
+    "n8nNodesApiVersion": 1,
+    "credentials": [],
+    "nodes": [
+      "dist/nodes/WakeOnLan/WakeOnLan.node.js"
+    ]
+  },
+  "devDependencies": {
+    "@types/node": "^24.10.1",
+    "n8n-workflow": "^1.101.0",
+    "typescript": "^5.9.3"
+  },
+  "peerDependencies": {
+    "n8n-workflow": "^1.101.0"
+  }
+}

@@ -1,0 +1,41 @@
+name: Publish bumped nodes
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - packages/**/project.json
+      - packages/**/package.json
+      - packages/**/nodes/**
+      - packages/**/credentials/**
+      - packages/**/tsconfig.json
+      - scripts/release-changed-nodes.mjs
+      - .github/workflows/publish.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org
+
+      - name: Publish bumped packages
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          BASE_REF: ${{ github.event.before }}
+          HEAD_REF: ${{ github.sha }}
+        run: node scripts/release-changed-nodes.mjs

@@ -1,0 +1,7 @@
+{
+  "name": "wake-on-lan",
+  "packageName": "n8n-nodes-wol",
+  "version": "0.1.0",
+  "root": "packages/wake-on-lan",
+  "description": "Send Wake-on-LAN magic packets from n8n."
+}

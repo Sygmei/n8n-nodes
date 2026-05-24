@@ -20,6 +20,10 @@ Add new node packages by creating another directory in `packages/` with its own 
 
 The first package is `n8n-nodes-wol`. It sends Wake-on-LAN magic packets to a configurable MAC address, broadcast address, port, repeat count, and repeat delay.
 
+## Wait for TCP Port
+
+The second package is `n8n-nodes-wait-for-tcp-port`. It waits until a TCP host and port accepts connections, which is useful after sending a Wake-on-LAN packet.
+
 ## Development
 
 Install dependencies:

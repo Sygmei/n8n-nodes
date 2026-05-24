@@ -1,0 +1,51 @@
+{
+  "name": "n8n-nodes-wait-for-tcp-port",
+  "version": "0.1.0",
+  "description": "n8n community node to wait until a TCP port accepts connections.",
+  "license": "MIT",
+  "author": {
+    "name": "Sygmei"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/Sygmei/n8n-nodes.git",
+    "directory": "packages/wait-for-tcp-port"
+  },
+  "homepage": "https://github.com/Sygmei/n8n-nodes/tree/main/packages/wait-for-tcp-port",
+  "bugs": {
+    "url": "https://github.com/Sygmei/n8n-nodes/issues"
+  },
+  "keywords": [
+    "n8n-community-node-package",
+    "n8n",
+    "tcp",
+    "port",
+    "wait"
+  ],
+  "main": "dist/nodes/WaitForTcpPort/WaitForTcpPort.node.js",
+  "types": "dist/nodes/WaitForTcpPort/WaitForTcpPort.node.d.ts",
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "node ../../scripts/clean-dist.mjs && tsc -p tsconfig.json && node ../../scripts/copy-node-assets.mjs",
+    "check": "tsc -p tsconfig.json --noEmit",
+    "prepack": "npm run build"
+  },
+  "n8n": {
+    "n8nNodesApiVersion": 1,
+    "credentials": [],
+    "nodes": [
+      "dist/nodes/WaitForTcpPort/WaitForTcpPort.node.js"
+    ]
+  },
+  "devDependencies": {
+    "@types/node": "^24.10.1",
+    "n8n-workflow": "^1.101.0",
+    "typescript": "^5.9.3"
+  },
+  "peerDependencies": {
+    "n8n-workflow": "^1.101.0"
+  }
+}

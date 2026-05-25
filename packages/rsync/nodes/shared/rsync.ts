@@ -219,7 +219,12 @@ export function buildRemotePath(credentials: SshPrivateKeyCredentials, remotePat
 }
 
 export function createTemporaryPrivateKey(credentials: SshPrivateKeyCredentials): TemporaryPrivateKey {
-  const privateKey = String(credentials.privateKey ?? '').replace(/\\n/g, '\n').trimEnd();
+  const privateKey = String(credentials.privateKey ?? '')
+    .replace(/\\r\\n/g, '\n')
+    .replace(/\\n/g, '\n')
+    .replace(/\r\n/g, '\n')
+    .replace(/\r/g, '\n')
+    .trim();
   const passphrase = String(credentials.passphrase ?? '');
 
   if (!privateKey) {

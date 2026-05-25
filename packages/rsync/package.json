@@ -1,6 +1,6 @@
 {
   "name": "n8n-nodes-rsync",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "n8n community nodes to run rsync pull and push operations.",
   "license": "MIT",
   "author": {

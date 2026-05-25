@@ -38,7 +38,6 @@ export class ResticRepository implements ICredentialType {
       type: 'string',
       typeOptions: {
         rows: 3,
-        password: true,
       },
       default: '',
       placeholder:

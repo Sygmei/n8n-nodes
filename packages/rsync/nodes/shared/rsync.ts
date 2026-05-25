@@ -218,18 +218,48 @@ export function buildRemotePath(credentials: SshPrivateKeyCredentials, remotePat
   return `${user}@${host}:${path}`;
 }
 
-export function createTemporaryPrivateKey(credentials: SshPrivateKeyCredentials): TemporaryPrivateKey {
-  const privateKey = String(credentials.privateKey ?? '')
+function formatPrivateKey(privateKey: string): string {
+  let formattedPrivateKey = privateKey
     .replace(/\\r\\n/g, '\n')
     .replace(/\\n/g, '\n')
     .replace(/\r\n/g, '\n')
     .replace(/\r/g, '\n')
     .trim();
+
+  const oneLineKeyMatch = formattedPrivateKey.match(
+    /^(-----BEGIN [^-]+PRIVATE KEY-----)\s*([A-Za-z0-9+/=\s]+?)\s*(-----END [^-]+PRIVATE KEY-----)$/s,
+  );
+
+  if (oneLineKeyMatch) {
+    const [, header, body, footer] = oneLineKeyMatch;
+    const bodyLines = body.replace(/\s+/g, '').match(/.{1,70}/g) ?? [];
+    formattedPrivateKey = [header, ...bodyLines, footer].join('\n');
+  }
+
+  return `${formattedPrivateKey}\n`;
+}
+
+function assertPrivateKeyLooksValid(privateKey: string) {
+  if (!/-----BEGIN [^-]+PRIVATE KEY-----/.test(privateKey)) {
+    throw new Error(
+      'SSH Private Key credential does not contain a private key block. Expected a value like "-----BEGIN OPENSSH PRIVATE KEY-----".',
+    );
+  }
+
+  if (!/-----END [^-]+PRIVATE KEY-----/.test(privateKey)) {
+    throw new Error('SSH Private Key credential is missing the private key footer.');
+  }
+}
+
+export function createTemporaryPrivateKey(credentials: SshPrivateKeyCredentials): TemporaryPrivateKey {
+  const privateKey = formatPrivateKey(String(credentials.privateKey ?? ''));
   const passphrase = String(credentials.passphrase ?? '');
 
-  if (!privateKey) {
+  if (!privateKey.trim()) {
     throw new Error('SSH Private Key credential is missing a private key.');
   }
+
+  assertPrivateKeyLooksValid(privateKey);
 
   if (passphrase) {
     throw new Error('Passphrase-protected SSH keys are not supported by the rsync nodes.');
@@ -238,7 +268,7 @@ export function createTemporaryPrivateKey(credentials: SshPrivateKeyCredentials)
   const directory = mkdtempSync(join(tmpdir(), 'n8n-rsync-'));
   const path = join(directory, 'id_key');
 
-  writeFileSync(path, `${privateKey}\n`, { encoding: 'utf8', mode: 0o600 });
+  writeFileSync(path, privateKey, { encoding: 'utf8', mode: 0o600 });
   chmodSync(path, 0o600);
 
   return {

@@ -20,7 +20,9 @@ USER node
 
 Use n8n's built-in **SSH Private Key** credential. Password-based SSH is not supported because native `rsync`/`ssh` cannot use a password non-interactively without extra tools such as `sshpass`.
 
-The private key is written to a temporary file while rsync runs, then removed. Passphrase-protected keys are not supported by this node; use an unencrypted deploy key with limited permissions.
+By default, the private key is written to a temporary file while rsync runs, then removed. Passphrase-protected keys are not supported by this node; use an unencrypted deploy key with limited permissions.
+
+The private key can be stored as a normal OpenSSH block, including escaped newlines. The node normalizes it before passing it to native OpenSSH.
 
 ## Nodes
 

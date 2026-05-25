@@ -77,6 +77,7 @@ export class RsyncPull implements INodeType {
         const additionalSshOptions = this.getNodeParameter('additionalSshOptions', itemIndex) as string;
         const source = buildRemotePath(credentials, remotePath);
         const temporaryPrivateKey = createTemporaryPrivateKey(credentials);
+        const identityFile = temporaryPrivateKey.path;
 
         try {
           if (!localPath) {
@@ -100,7 +101,7 @@ export class RsyncPull implements INodeType {
             '-e',
             buildSshCommand(
               credentials,
-              temporaryPrivateKey.path,
+              identityFile,
               strictHostKeyChecking,
               additionalSshOptions,
             ),
@@ -131,7 +132,7 @@ export class RsyncPull implements INodeType {
             },
           });
         } finally {
-          temporaryPrivateKey.cleanup();
+          temporaryPrivateKey?.cleanup();
         }
       } catch (error) {
         if (this.continueOnFail()) {

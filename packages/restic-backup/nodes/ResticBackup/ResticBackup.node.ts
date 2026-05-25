@@ -24,6 +24,11 @@ type ResticCommandResult = {
   timedOut: boolean;
 };
 
+type ParsedResticOutput = {
+  messages: IDataObject[];
+  unparsedLines: string[];
+};
+
 function splitLines(value: string): string[] {
   return value
     .split(/\r?\n/)
@@ -119,12 +124,22 @@ function parseEnvironmentVariables(value: string): Record<string, string> {
   return environment;
 }
 
-function parseResticJsonLines(output: string): IDataObject[] {
-  return output
-    .split(/\r?\n/)
-    .map((line) => line.trim())
-    .filter(Boolean)
-    .map((line) => JSON.parse(line) as IDataObject);
+function parseResticJsonLines(output: string): ParsedResticOutput {
+  const messages: IDataObject[] = [];
+  const unparsedLines: string[] = [];
+
+  for (const line of splitLines(output)) {
+    try {
+      messages.push(JSON.parse(line) as IDataObject);
+    } catch {
+      unparsedLines.push(line);
+    }
+  }
+
+  return {
+    messages,
+    unparsedLines,
+  };
 }
 
 function findSummary(messages: IDataObject[]): IDataObject | undefined {
@@ -335,12 +350,22 @@ export class ResticBackup implements INodeType {
           env,
           commandTimeoutSeconds * 1000,
         );
-        const messages = parseResticJsonLines(result.stdout);
+        const parsedOutput = parseResticJsonLines(result.stdout);
+        const messages = parsedOutput.messages;
         const summary = findSummary(messages);
 
         if (result.exitCode !== 0) {
+          const details = [
+            result.stderr.trim(),
+            parsedOutput.unparsedLines.length > 0
+              ? `stdout: ${parsedOutput.unparsedLines.join('\n')}`
+              : '',
+          ]
+            .filter(Boolean)
+            .join('\n');
+
           throw new Error(
-            `restic backup failed with exit code ${result.exitCode}.${result.stderr ? ` ${result.stderr.trim()}` : ''}`,
+            `restic backup failed with exit code ${result.exitCode}.${details ? ` ${details}` : ''}`,
           );
         }
 
@@ -358,6 +383,9 @@ export class ResticBackup implements INodeType {
               sftpCommand: sftpCommand || undefined,
               summary,
               messages,
+              unparsedOutput: parsedOutput.unparsedLines.length > 0
+                ? parsedOutput.unparsedLines
+                : undefined,
               stderr: result.stderr.trim() || undefined,
               timedOut: result.timedOut,
             },

@@ -35,9 +35,7 @@
   },
   "n8n": {
     "n8nNodesApiVersion": 1,
-    "credentials": [
-      "dist/credentials/RsyncSsh.credentials.js"
-    ],
+    "credentials": [],
     "nodes": [
       "dist/nodes/RsyncPull/RsyncPull.node.js",
       "dist/nodes/RsyncPush/RsyncPush.node.js"

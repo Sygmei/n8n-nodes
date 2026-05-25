@@ -10,11 +10,12 @@ import {
   buildRemotePath,
   buildSshCommand,
   commonRsyncProperties,
+  createTemporaryPrivateKey,
   resultToJson,
   runRsync,
   splitCommandLine,
   splitLines,
-  type RsyncSshCredentials,
+  type SshPrivateKeyCredentials,
 } from '../shared/rsync';
 
 export class RsyncPull implements INodeType {
@@ -33,7 +34,7 @@ export class RsyncPull implements INodeType {
     outputs: [NodeConnectionTypes.Main],
     credentials: [
       {
-        name: 'rsyncSsh',
+        name: 'sshPrivateKey',
         required: true,
       },
     ],
@@ -67,48 +68,65 @@ export class RsyncPull implements INodeType {
 
     for (let itemIndex = 0; itemIndex < items.length; itemIndex += 1) {
       try {
-        const credentials = await this.getCredentials<RsyncSshCredentials>('rsyncSsh', itemIndex);
+        const credentials = await this.getCredentials<SshPrivateKeyCredentials>('sshPrivateKey', itemIndex);
         const remotePath = this.getNodeParameter('remotePath', itemIndex) as string;
         const localPath = (this.getNodeParameter('localPath', itemIndex) as string).trim();
         const rsyncBinary = (this.getNodeParameter('rsyncBinary', itemIndex) as string).trim();
         const commandTimeoutSeconds = this.getNodeParameter('commandTimeoutSeconds', itemIndex) as number;
+        const strictHostKeyChecking = this.getNodeParameter('strictHostKeyChecking', itemIndex) as string;
+        const additionalSshOptions = this.getNodeParameter('additionalSshOptions', itemIndex) as string;
         const source = buildRemotePath(credentials, remotePath);
+        const temporaryPrivateKey = createTemporaryPrivateKey(credentials);
 
-        if (!localPath) {
-          throw new Error('Local path is required.');
-        }
+        try {
+          if (!localPath) {
+            throw new Error('Local path is required.');
+          }
 
-        if (!rsyncBinary) {
-          throw new Error('Rsync binary is required.');
-        }
+          if (!rsyncBinary) {
+            throw new Error('Rsync binary is required.');
+          }
 
-        const args = buildBaseArgs(
-          this.getNodeParameter('archiveMode', itemIndex) as boolean,
-          this.getNodeParameter('compress', itemIndex) as boolean,
-          this.getNodeParameter('deleteExtraFiles', itemIndex) as boolean,
-          this.getNodeParameter('dryRun', itemIndex) as boolean,
-          splitLines(this.getNodeParameter('excludePatterns', itemIndex) as string),
-          splitCommandLine(this.getNodeParameter('additionalArguments', itemIndex) as string),
-        );
-
-        args.push('-e', buildSshCommand(credentials), source, localPath);
-
-        const result = await runRsync(rsyncBinary, args, commandTimeoutSeconds * 1000);
-
-        if (result.exitCode !== 0) {
-          throw new Error(
-            `rsync pull failed with exit code ${result.exitCode}.${result.stderrLines.length > 0 ? ` ${result.stderrLines.join('\n')}` : ''}`,
+          const args = buildBaseArgs(
+            this.getNodeParameter('archiveMode', itemIndex) as boolean,
+            this.getNodeParameter('compress', itemIndex) as boolean,
+            this.getNodeParameter('deleteExtraFiles', itemIndex) as boolean,
+            this.getNodeParameter('dryRun', itemIndex) as boolean,
+            splitLines(this.getNodeParameter('excludePatterns', itemIndex) as string),
+            splitCommandLine(this.getNodeParameter('additionalArguments', itemIndex) as string),
           );
-        }
 
-        returnData.push({
-          json: {
-            rsyncPull: resultToJson('pull', rsyncBinary, args, source, localPath, result),
-          },
-          pairedItem: {
-            item: itemIndex,
-          },
-        });
+          args.push(
+            '-e',
+            buildSshCommand(
+              credentials,
+              temporaryPrivateKey.path,
+              strictHostKeyChecking,
+              additionalSshOptions,
+            ),
+            source,
+            localPath,
+          );
+
+          const result = await runRsync(rsyncBinary, args, commandTimeoutSeconds * 1000);
+
+          if (result.exitCode !== 0) {
+            throw new Error(
+              `rsync pull failed with exit code ${result.exitCode}.${result.stderrLines.length > 0 ? ` ${result.stderrLines.join('\n')}` : ''}`,
+            );
+          }
+
+          returnData.push({
+            json: {
+              rsyncPull: resultToJson('pull', rsyncBinary, args, source, localPath, result),
+            },
+            pairedItem: {
+              item: itemIndex,
+            },
+          });
+        } finally {
+          temporaryPrivateKey.cleanup();
+        }
       } catch (error) {
         if (this.continueOnFail()) {
           returnData.push({

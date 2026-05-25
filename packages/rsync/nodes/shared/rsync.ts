@@ -1,13 +1,20 @@
 import { spawn } from 'node:child_process';
+import { chmodSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import type { ICredentialDataDecryptedObject, IDataObject, INodeProperties } from 'n8n-workflow';
 
-export type RsyncSshCredentials = ICredentialDataDecryptedObject & {
+export type SshPrivateKeyCredentials = ICredentialDataDecryptedObject & {
   host?: string;
-  user?: string;
+  username?: string;
   port?: number;
-  identityFile?: string;
-  strictHostKeyChecking?: string;
-  additionalSshOptions?: string;
+  privateKey?: string;
+  passphrase?: string;
+};
+
+export type TemporaryPrivateKey = {
+  path: string;
+  cleanup: () => void;
 };
 
 export type RsyncResult = {
@@ -22,6 +29,38 @@ export type RsyncResult = {
 const maxStoredLines = 250;
 
 export const commonRsyncProperties: INodeProperties[] = [
+  {
+    displayName: 'Strict Host Key Checking',
+    name: 'strictHostKeyChecking',
+    type: 'options',
+    options: [
+      {
+        name: 'Accept New',
+        value: 'accept-new',
+      },
+      {
+        name: 'Yes',
+        value: 'yes',
+      },
+      {
+        name: 'No',
+        value: 'no',
+      },
+    ],
+    default: 'accept-new',
+    description: 'SSH StrictHostKeyChecking value',
+  },
+  {
+    displayName: 'Additional SSH Options',
+    name: 'additionalSshOptions',
+    type: 'string',
+    typeOptions: {
+      rows: 4,
+    },
+    default: '',
+    placeholder: 'UserKnownHostsFile=/home/node/.ssh/known_hosts',
+    description: 'Optional SSH -o KEY=VALUE lines',
+  },
   {
     displayName: 'Archive Mode',
     name: 'archiveMode',
@@ -157,9 +196,9 @@ export function splitCommandLine(value: string): string[] {
   return args;
 }
 
-export function buildRemotePath(credentials: RsyncSshCredentials, remotePath: string): string {
+export function buildRemotePath(credentials: SshPrivateKeyCredentials, remotePath: string): string {
   const host = String(credentials.host ?? '').trim();
-  const user = String(credentials.user ?? '').trim();
+  const user = String(credentials.username ?? '').trim();
   const path = remotePath.trim();
 
   if (!host) {
@@ -167,7 +206,7 @@ export function buildRemotePath(credentials: RsyncSshCredentials, remotePath: st
   }
 
   if (!user) {
-    throw new Error('Rsync SSH credential is missing a user.');
+    throw new Error('SSH Private Key credential is missing a username.');
   }
 
   if (!path) {
@@ -177,23 +216,50 @@ export function buildRemotePath(credentials: RsyncSshCredentials, remotePath: st
   return `${user}@${host}:${path}`;
 }
 
-export function buildSshCommand(credentials: RsyncSshCredentials): string {
+export function createTemporaryPrivateKey(credentials: SshPrivateKeyCredentials): TemporaryPrivateKey {
+  const privateKey = String(credentials.privateKey ?? '').trim();
+  const passphrase = String(credentials.passphrase ?? '');
+
+  if (!privateKey) {
+    throw new Error('SSH Private Key credential is missing a private key.');
+  }
+
+  if (passphrase) {
+    throw new Error('Passphrase-protected SSH keys are not supported by the rsync nodes.');
+  }
+
+  const directory = mkdtempSync(join(tmpdir(), 'n8n-rsync-'));
+  const path = join(directory, 'id_key');
+
+  writeFileSync(path, `${privateKey}\n`, { mode: 0o600 });
+  chmodSync(path, 0o600);
+
+  return {
+    path,
+    cleanup: () => {
+      rmSync(directory, { force: true, recursive: true });
+    },
+  };
+}
+
+export function buildSshCommand(
+  credentials: SshPrivateKeyCredentials,
+  identityFile: string,
+  strictHostKeyChecking: string,
+  additionalSshOptions: string,
+): string {
   const args = ['ssh'];
   const port = Number(credentials.port ?? 22);
-  const identityFile = String(credentials.identityFile ?? '').trim();
-  const strictHostKeyChecking = String(credentials.strictHostKeyChecking ?? 'accept-new').trim();
+  const normalizedStrictHostKeyChecking = strictHostKeyChecking.trim();
 
   args.push('-p', String(port));
+  args.push('-i', identityFile, '-o', 'IdentitiesOnly=yes');
 
-  if (identityFile) {
-    args.push('-i', identityFile, '-o', 'IdentitiesOnly=yes');
+  if (normalizedStrictHostKeyChecking) {
+    args.push('-o', `StrictHostKeyChecking=${normalizedStrictHostKeyChecking}`);
   }
 
-  if (strictHostKeyChecking) {
-    args.push('-o', `StrictHostKeyChecking=${strictHostKeyChecking}`);
-  }
-
-  for (const option of splitLines(String(credentials.additionalSshOptions ?? ''))) {
+  for (const option of splitLines(additionalSshOptions)) {
     args.push('-o', option);
   }
 

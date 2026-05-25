@@ -8,14 +8,9 @@ The `rsync` binary must be installed in the n8n container. If using SSH transpor
 
 ## Credentials
 
-Create an **Rsync SSH** credential with:
+Use n8n's built-in **SSH Private Key** credential. Password-based SSH is not supported because native `rsync`/`ssh` cannot use a password non-interactively without extra tools such as `sshpass`.
 
-- **Host**: Remote hostname or IP address.
-- **User**: SSH username.
-- **Port**: SSH port.
-- **Identity File**: Optional path to an SSH private key.
-- **Strict Host Key Checking**: SSH host key behavior.
-- **Additional SSH Options**: Optional extra `-o KEY=VALUE` lines.
+The private key is written to a temporary file while rsync runs, then removed. Passphrase-protected keys are not supported by this node; use an unencrypted deploy key with limited permissions.
 
 ## Nodes
 

@@ -212,7 +212,6 @@ export class WaitForTcpPort implements INodeType {
 
         returnData.push({
           json: {
-            ...items[itemIndex].json,
             waitForTcpPort: {
               host,
               port,
@@ -231,7 +230,6 @@ export class WaitForTcpPort implements INodeType {
         if (this.continueOnFail()) {
           returnData.push({
             json: {
-              ...items[itemIndex].json,
               error: error instanceof Error ? error.message : String(error),
             },
             pairedItem: {

@@ -269,7 +269,6 @@ export class ResolveMacAddress implements INodeType {
 
         returnData.push({
           json: {
-            ...items[itemIndex].json,
             resolveMacAddress: {
               host,
               ipAddress,
@@ -287,7 +286,6 @@ export class ResolveMacAddress implements INodeType {
         if (this.continueOnFail()) {
           returnData.push({
             json: {
-              ...items[itemIndex].json,
               error: error instanceof Error ? error.message : String(error),
             },
             pairedItem: {

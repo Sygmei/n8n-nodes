@@ -156,7 +156,6 @@ export class WakeOnLan implements INodeType {
 
         returnData.push({
           json: {
-            ...items[itemIndex].json,
             wakeOnLan: {
               macAddress: normalizedMacAddress,
               broadcastAddress,
@@ -172,7 +171,6 @@ export class WakeOnLan implements INodeType {
         if (this.continueOnFail()) {
           returnData.push({
             json: {
-              ...items[itemIndex].json,
               error: error instanceof Error ? error.message : String(error),
             },
             pairedItem: {

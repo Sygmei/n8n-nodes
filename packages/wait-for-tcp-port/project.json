@@ -1,7 +1,7 @@
 {
   "name": "wait-for-tcp-port",
   "packageName": "n8n-nodes-wait-for-tcp-port",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "root": "packages/wait-for-tcp-port",
   "description": "Wait until a TCP host and port accepts connections from n8n."
 }

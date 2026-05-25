@@ -19,6 +19,8 @@ export type TemporaryPrivateKey = {
 
 export type RsyncResult = {
   exitCode: number;
+  spawnError?: string;
+  spawnErrorCode?: string;
   stdoutLines: string[];
   stderrLines: string[];
   omittedStdoutLineCount: number;
@@ -217,7 +219,7 @@ export function buildRemotePath(credentials: SshPrivateKeyCredentials, remotePat
 }
 
 export function createTemporaryPrivateKey(credentials: SshPrivateKeyCredentials): TemporaryPrivateKey {
-  const privateKey = String(credentials.privateKey ?? '').trim();
+  const privateKey = String(credentials.privateKey ?? '').replace(/\\n/g, '\n').trimEnd();
   const passphrase = String(credentials.passphrase ?? '');
 
   if (!privateKey) {
@@ -231,7 +233,7 @@ export function createTemporaryPrivateKey(credentials: SshPrivateKeyCredentials)
   const directory = mkdtempSync(join(tmpdir(), 'n8n-rsync-'));
   const path = join(directory, 'id_key');
 
-  writeFileSync(path, `${privateKey}\n`, { mode: 0o600 });
+  writeFileSync(path, `${privateKey}\n`, { encoding: 'utf8', mode: 0o600 });
   chmodSync(path, 0o600);
 
   return {
@@ -375,6 +377,8 @@ export function runRsync(
       clearTimeout(timeout);
       resolve({
         exitCode: 1,
+        spawnError: error.message,
+        spawnErrorCode: 'code' in error && typeof error.code === 'string' ? error.code : undefined,
         stdoutLines,
         stderrLines: [...stderrLines, error.message],
         omittedStdoutLineCount,
@@ -423,6 +427,8 @@ export function resultToJson(
     status: 'completed',
     command,
     arguments: args,
+    spawnError: result.spawnError,
+    spawnErrorCode: result.spawnErrorCode,
     source,
     destination,
     stdout: result.stdoutLines,

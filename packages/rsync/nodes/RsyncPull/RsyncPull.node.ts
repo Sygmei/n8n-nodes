@@ -110,6 +110,12 @@ export class RsyncPull implements INodeType {
 
           const result = await runRsync(rsyncBinary, args, commandTimeoutSeconds * 1000);
 
+          if (result.spawnErrorCode === 'ENOENT') {
+            throw new Error(
+              `rsync binary "${rsyncBinary}" was not found in the n8n runtime. Install rsync in the container or set Rsync Binary to an absolute path.`,
+            );
+          }
+
           if (result.exitCode !== 0) {
             throw new Error(
               `rsync pull failed with exit code ${result.exitCode}.${result.stderrLines.length > 0 ? ` ${result.stderrLines.join('\n')}` : ''}`,

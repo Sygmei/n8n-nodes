@@ -4,7 +4,17 @@ Run rsync pull and push operations from n8n.
 
 ## Requirements
 
-The `rsync` binary must be installed in the n8n container. If using SSH transport, `ssh` must also be available and the configured key file must be readable by the n8n user.
+The `rsync` binary must be installed in the n8n container. If using SSH transport, `ssh` must also be available.
+
+For the official Alpine-based n8n image, install them in a custom image with:
+
+```dockerfile
+FROM n8nio/n8n:latest
+
+USER root
+RUN apk add --no-cache rsync openssh-client
+USER node
+```
 
 ## Credentials
 

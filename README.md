@@ -28,6 +28,10 @@ The second package is `n8n-nodes-wait-for-tcp-port`. It waits until a TCP host a
 
 The third package is `n8n-nodes-resolve-mac-address`. It resolves a local-network hostname or IPv4 address to a MAC address using the host OS neighbor table.
 
+## Restic Backup
+
+The fourth package is `n8n-nodes-restic-backup`. It runs `restic backup --json` with repository credentials stored in n8n credentials.
+
 ## Development
 
 Install dependencies:

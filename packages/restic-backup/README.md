@@ -33,4 +33,4 @@ Do not include the outer `-o sftp.command="..."` wrapper in the credential field
 - **Command Timeout**: Maximum seconds the backup command may run.
 - **Additional Arguments**: Optional extra arguments passed directly to `restic backup`.
 
-The node runs `restic backup --json` and returns the parsed summary when Restic emits one.
+The node runs `restic backup --json` and returns the parsed summary when Restic emits one. Long-running backups can emit many status messages, so the node stores the latest status, the summary, and up to 250 parsed JSON messages. If more messages are emitted, `omittedMessageCount` reports how many were skipped from the returned item.

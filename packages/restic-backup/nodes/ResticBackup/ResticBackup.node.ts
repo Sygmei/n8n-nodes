@@ -1,4 +1,4 @@
-import { execFile } from 'node:child_process';
+import { spawn } from 'node:child_process';
 import type {
   ICredentialDataDecryptedObject,
   IDataObject,
@@ -19,15 +19,16 @@ type ResticCredentials = ICredentialDataDecryptedObject & {
 
 type ResticCommandResult = {
   exitCode: number;
-  stdout: string;
   stderr: string;
   timedOut: boolean;
-};
-
-type ParsedResticOutput = {
   messages: IDataObject[];
   unparsedLines: string[];
+  latestStatus?: IDataObject;
+  summary?: IDataObject;
+  omittedMessageCount: number;
 };
+
+const maxStoredMessages = 250;
 
 function splitLines(value: string): string[] {
   return value
@@ -124,28 +125,6 @@ function parseEnvironmentVariables(value: string): Record<string, string> {
   return environment;
 }
 
-function parseResticJsonLines(output: string): ParsedResticOutput {
-  const messages: IDataObject[] = [];
-  const unparsedLines: string[] = [];
-
-  for (const line of splitLines(output)) {
-    try {
-      messages.push(JSON.parse(line) as IDataObject);
-    } catch {
-      unparsedLines.push(line);
-    }
-  }
-
-  return {
-    messages,
-    unparsedLines,
-  };
-}
-
-function findSummary(messages: IDataObject[]): IDataObject | undefined {
-  return messages.find((message) => message.message_type === 'summary');
-}
-
 function runRestic(
   binary: string,
   args: string[],
@@ -153,27 +132,126 @@ function runRestic(
   timeoutMs: number,
 ): Promise<ResticCommandResult> {
   return new Promise((resolve) => {
-    execFile(
-      binary,
-      args,
-      {
-        env,
-        timeout: timeoutMs,
-        windowsHide: true,
-        maxBuffer: 10 * 1024 * 1024,
-      },
-      (error, stdout, stderr) => {
-        const exitCode = typeof error?.code === 'number' ? error.code : error ? 1 : 0;
-        const errorMessage = error && typeof error.code !== 'number' ? error.message : '';
+    const messages: IDataObject[] = [];
+    const unparsedLines: string[] = [];
+    const stderrLines: string[] = [];
+    let latestStatus: IDataObject | undefined;
+    let summary: IDataObject | undefined;
+    let omittedMessageCount = 0;
+    let stdoutBuffer = '';
+    let stderrBuffer = '';
+    let settled = false;
+    let timedOut = false;
 
-        resolve({
-          exitCode,
-          stdout,
-          stderr: [stderr, errorMessage].filter(Boolean).join('\n'),
-          timedOut: Boolean(error?.killed),
-        });
-      },
-    );
+    const child = spawn(binary, args, {
+      env,
+      windowsHide: true,
+    });
+
+    const timeout = setTimeout(() => {
+      timedOut = true;
+      child.kill('SIGTERM');
+    }, timeoutMs);
+
+    function storeMessage(message: IDataObject) {
+      if (message.message_type === 'status') {
+        latestStatus = message;
+      }
+
+      if (message.message_type === 'summary') {
+        summary = message;
+      }
+
+      if (messages.length < maxStoredMessages) {
+        messages.push(message);
+        return;
+      }
+
+      omittedMessageCount += 1;
+    }
+
+    function handleStdoutLine(line: string) {
+      const trimmedLine = line.trim();
+
+      if (!trimmedLine) {
+        return;
+      }
+
+      try {
+        storeMessage(JSON.parse(trimmedLine) as IDataObject);
+      } catch {
+        unparsedLines.push(trimmedLine);
+      }
+    }
+
+    child.stdout.setEncoding('utf8');
+    child.stdout.on('data', (chunk: string) => {
+      stdoutBuffer += chunk;
+      const lines = stdoutBuffer.split(/\r?\n/);
+      stdoutBuffer = lines.pop() ?? '';
+
+      for (const line of lines) {
+        handleStdoutLine(line);
+      }
+    });
+
+    child.stderr.setEncoding('utf8');
+    child.stderr.on('data', (chunk: string) => {
+      stderrBuffer += chunk;
+      const lines = stderrBuffer.split(/\r?\n/);
+      stderrBuffer = lines.pop() ?? '';
+
+      for (const line of lines) {
+        if (line.trim()) {
+          stderrLines.push(line.trim());
+        }
+      }
+    });
+
+    child.once('error', (error) => {
+      if (settled) {
+        return;
+      }
+
+      settled = true;
+      clearTimeout(timeout);
+      resolve({
+        exitCode: 1,
+        stderr: error.message,
+        timedOut,
+        messages,
+        unparsedLines,
+        latestStatus,
+        summary,
+        omittedMessageCount,
+      });
+    });
+
+    child.once('close', (code, signal) => {
+      if (settled) {
+        return;
+      }
+
+      settled = true;
+      clearTimeout(timeout);
+
+      handleStdoutLine(stdoutBuffer);
+
+      if (stderrBuffer.trim()) {
+        stderrLines.push(stderrBuffer.trim());
+      }
+
+      resolve({
+        exitCode: code ?? (signal ? 1 : 0),
+        stderr: stderrLines.join('\n'),
+        timedOut,
+        messages,
+        unparsedLines,
+        latestStatus,
+        summary,
+        omittedMessageCount,
+      });
+    });
   });
 }
 
@@ -350,15 +428,15 @@ export class ResticBackup implements INodeType {
           env,
           commandTimeoutSeconds * 1000,
         );
-        const parsedOutput = parseResticJsonLines(result.stdout);
-        const messages = parsedOutput.messages;
-        const summary = findSummary(messages);
 
         if (result.exitCode !== 0) {
           const details = [
             result.stderr.trim(),
-            parsedOutput.unparsedLines.length > 0
-              ? `stdout: ${parsedOutput.unparsedLines.join('\n')}`
+            result.unparsedLines.length > 0
+              ? `stdout: ${result.unparsedLines.join('\n')}`
+              : '',
+            result.latestStatus
+              ? `latest status: ${JSON.stringify(result.latestStatus)}`
               : '',
           ]
             .filter(Boolean)
@@ -381,10 +459,12 @@ export class ResticBackup implements INodeType {
               command: resticBinary,
               arguments: args,
               sftpCommand: sftpCommand || undefined,
-              summary,
-              messages,
-              unparsedOutput: parsedOutput.unparsedLines.length > 0
-                ? parsedOutput.unparsedLines
+              summary: result.summary,
+              latestStatus: result.latestStatus,
+              messages: result.messages,
+              omittedMessageCount: result.omittedMessageCount || undefined,
+              unparsedOutput: result.unparsedLines.length > 0
+                ? result.unparsedLines
                 : undefined,
               stderr: result.stderr.trim() || undefined,
               timedOut: result.timedOut,

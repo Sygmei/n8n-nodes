@@ -32,6 +32,10 @@ The third package is `n8n-nodes-resolve-mac-address`. It resolves a local-networ
 
 The fourth package is `n8n-nodes-restic-backup`. It runs `restic backup --json` with repository credentials stored in n8n credentials.
 
+## Rsync
+
+The fifth package is `n8n-nodes-rsync`. It provides `Rsync Pull` and `Rsync Push` nodes for SSH-based file synchronization.
+
 ## Development
 
 Install dependencies:

@@ -1,0 +1,54 @@
+{
+  "name": "n8n-nodes-rsync",
+  "version": "0.1.0",
+  "description": "n8n community nodes to run rsync pull and push operations.",
+  "license": "MIT",
+  "author": {
+    "name": "Sygmei"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/Sygmei/n8n-nodes.git",
+    "directory": "packages/rsync"
+  },
+  "homepage": "https://github.com/Sygmei/n8n-nodes/tree/main/packages/rsync",
+  "bugs": {
+    "url": "https://github.com/Sygmei/n8n-nodes/issues"
+  },
+  "keywords": [
+    "n8n-community-node-package",
+    "n8n",
+    "rsync",
+    "ssh",
+    "sync"
+  ],
+  "main": "dist/nodes/RsyncPull/RsyncPull.node.js",
+  "types": "dist/nodes/RsyncPull/RsyncPull.node.d.ts",
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "node ../../scripts/clean-dist.mjs && tsc -p tsconfig.json && node ../../scripts/copy-node-assets.mjs",
+    "check": "tsc -p tsconfig.json --noEmit",
+    "prepack": "npm run build"
+  },
+  "n8n": {
+    "n8nNodesApiVersion": 1,
+    "credentials": [
+      "dist/credentials/RsyncSsh.credentials.js"
+    ],
+    "nodes": [
+      "dist/nodes/RsyncPull/RsyncPull.node.js",
+      "dist/nodes/RsyncPush/RsyncPush.node.js"
+    ]
+  },
+  "devDependencies": {
+    "@types/node": "^24.10.1",
+    "n8n-workflow": "^1.101.0",
+    "typescript": "^5.9.3"
+  },
+  "peerDependencies": {
+    "n8n-workflow": "^1.101.0"
+  }
+}

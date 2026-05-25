@@ -1,0 +1,7 @@
+{
+  "name": "rsync",
+  "packageName": "n8n-nodes-rsync",
+  "version": "0.1.0",
+  "root": "packages/rsync",
+  "description": "Run rsync pull and push operations from n8n."
+}

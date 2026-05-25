@@ -13,6 +13,7 @@ type ResticCredentials = ICredentialDataDecryptedObject & {
   repository?: string;
   password?: string;
   passwordFile?: string;
+  sftpCommand?: string;
   environmentVariables?: string;
 };
 
@@ -284,6 +285,7 @@ export class ResticBackup implements INodeType {
         const repository = String(credentials.repository ?? '').trim();
         const password = String(credentials.password ?? '');
         const passwordFile = String(credentials.passwordFile ?? '').trim();
+        const sftpCommand = String(credentials.sftpCommand ?? '').trim();
 
         if (!repository) {
           throw new Error('Restic repository credential is missing a repository.');
@@ -305,7 +307,13 @@ export class ResticBackup implements INodeType {
           env.RESTIC_PASSWORD = password;
         }
 
-        const args = ['backup', '--json'];
+        const args = [];
+
+        if (sftpCommand) {
+          args.push('-o', `sftp.command=${sftpCommand}`);
+        }
+
+        args.push('backup', '--json');
 
         for (const tag of tags) {
           args.push('--tag', tag);
@@ -347,6 +355,7 @@ export class ResticBackup implements INodeType {
               hostname: hostname || undefined,
               command: resticBinary,
               arguments: args,
+              sftpCommand: sftpCommand || undefined,
               summary,
               messages,
               stderr: result.stderr.trim() || undefined,

@@ -33,6 +33,19 @@ export class ResticRepository implements ICredentialType {
       description: 'Path to a file containing the repository password, passed as RESTIC_PASSWORD_FILE',
     },
     {
+      displayName: 'SFTP Command',
+      name: 'sftpCommand',
+      type: 'string',
+      typeOptions: {
+        rows: 3,
+        password: true,
+      },
+      default: '',
+      placeholder:
+        'ssh -i /hostdata/services/restic/ssh/restic-ssh-key -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new restic@sygnas.local -s sftp',
+      description: 'Optional SSH command passed to Restic as -o sftp.command=...',
+    },
+    {
       displayName: 'Environment Variables',
       name: 'environmentVariables',
       type: 'string',

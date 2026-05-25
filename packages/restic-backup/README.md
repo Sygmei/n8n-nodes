@@ -12,7 +12,16 @@ Create a **Restic Repository** credential with:
 
 - **Repository**: Restic repository location, for example `/backups/repo`, `sftp:user@host:/repo`, or `s3:s3.amazonaws.com/bucket`.
 - **Password** or **Password File**: Repository password source.
+- **SFTP Command**: Optional inner SSH command passed as `-o sftp.command=...`.
 - **Environment Variables**: Optional `KEY=VALUE` lines for backends such as S3, B2, Azure, or rclone.
+
+For example, set **SFTP Command** to:
+
+```text
+ssh -i /hostdata/services/restic/ssh/restic-ssh-key -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new restic@sygnas.local -s sftp
+```
+
+Do not include the outer `-o sftp.command="..."` wrapper in the credential field; the node adds that part.
 
 ## Parameters
 
